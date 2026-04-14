@@ -14,7 +14,6 @@ struct SourcesView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Category filter bar
                 categoryFilterSection
 
                 // Sources list
@@ -46,6 +45,7 @@ struct SourcesView: View {
                 }
             }
             .navigationTitle("News Sources")
+            .navigationBarTitleDisplayMode(.inline)
             .task {
                 await viewModel.fetchSources()
             }
