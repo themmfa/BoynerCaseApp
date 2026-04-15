@@ -8,6 +8,7 @@
 import Foundation
 import Combine
 
+@MainActor
 class ArticlesViewModel: ObservableObject {
     @Published var articles: [Article] = []
     @Published var isLoading = false
@@ -20,8 +21,8 @@ class ArticlesViewModel: ObservableObject {
 
     private let networkService: NetworkService
     private let readingListService: ReadingListServiceProtocol
-    private var autoRefreshTimer: Timer?
-    private var sliderTimer: Timer?
+    private var autoRefreshTask: Task<Void, Never>?
+    private var sliderTask: Task<Void, Never>?
 
     // Top 3 articles for slider
     var sliderArticles: [Article] {
@@ -48,13 +49,7 @@ class ArticlesViewModel: ObservableObject {
         self.readingListService = readingListService
     }
 
-    deinit {
-        stopAutoRefresh()
-        stopSliderTimer()
-    }
-
     // Fetch articles and sort by most recent first
-    @MainActor
     func fetchArticles() async {
         isLoading = true
         errorMessage = nil
@@ -78,7 +73,6 @@ class ArticlesViewModel: ObservableObject {
     }
 
     // Pull to refresh with error simulation
-    @MainActor
     func refreshArticles() async {
         isLoading = true
         showError = false
@@ -118,30 +112,30 @@ class ArticlesViewModel: ObservableObject {
 
     // MARK: - Auto Refresh (every 60 seconds)
 
-    @MainActor
     func startAutoRefresh() {
         stopAutoRefresh()
-        autoRefreshTimer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            Task { @MainActor in
+        autoRefreshTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 60_000_000_000) // 60 seconds
+                guard !Task.isCancelled, let self = self else { break }
                 await self.fetchArticles()
             }
         }
     }
 
     func stopAutoRefresh() {
-        autoRefreshTimer?.invalidate()
-        autoRefreshTimer = nil
+        autoRefreshTask?.cancel()
+        autoRefreshTask = nil
     }
 
     // MARK: - Slider Timer (every 5 seconds)
 
-    @MainActor
     func startSliderTimer() {
         stopSliderTimer()
-        sliderTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
+        sliderTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
+                guard !Task.isCancelled, let self = self else { break }
                 let count = self.sliderArticles.count
                 if count > 0 {
                     self.currentSliderIndex = (self.currentSliderIndex + 1) % count
@@ -151,7 +145,7 @@ class ArticlesViewModel: ObservableObject {
     }
 
     func stopSliderTimer() {
-        sliderTimer?.invalidate()
-        sliderTimer = nil
+        sliderTask?.cancel()
+        sliderTask = nil
     }
 }
