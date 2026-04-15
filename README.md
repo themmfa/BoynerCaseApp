@@ -47,6 +47,8 @@ Unit tests cover:
 
 Run tests with `Cmd+U` in Xcode.
 
+> **Note:** If you get memory crash when you doing UITests, change the simulator from iOS 26 to 18. This will fix the problem. 
+
 ## Dependencies
 
 No external dependencies. The project uses only Apple's native frameworks:
